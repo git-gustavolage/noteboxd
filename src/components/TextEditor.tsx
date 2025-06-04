@@ -85,13 +85,10 @@ const TextEditor: React.FC = () => {
     if (!current) return;
 
     const text = current.text;
-    //currentRange represneta o inedx do cursor dentro do texto
-
-    //funcao que divide o texto em 2 partes a partir de um index
     const splitText = (text: string, index: number) => {
       return [text.slice(0, index), text.slice(index)];
     }
-    
+
     const [left, right] = splitText(text, currentRange);
 
     const newNode: TextNodeData = {
@@ -139,6 +136,13 @@ const TextEditor: React.FC = () => {
           focus={node.id === focusedId}
         />
       ))}
+      <div>
+        {nodes.map((node) => (
+          <p>
+            {node.id} - {node.text}
+          </p>
+        ))}
+      </div>
     </div>
   );
 };
