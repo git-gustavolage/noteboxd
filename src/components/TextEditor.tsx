@@ -36,6 +36,7 @@ export const TextEditor: React.FC = () => {
   }
 
   const split = (id: string, cursorPosition: number): TextNodeData | undefined => {
+    //TODO: refatorar
     const node = nodes.filter((n) => n.id === id)[0];
     if (!node) return;
 

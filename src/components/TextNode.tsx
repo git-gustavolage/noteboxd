@@ -96,7 +96,7 @@ const TextNode: React.FC<TextNodeProps> = ({
 
 
     if (e.key === "Delete") {
-      const textLen = elementRef.current?.innerText.length ?? 0;
+      const textLen = elementRef.current?.innerText.length ?? 0;      
       if (pos === textLen) {
         e.preventDefault();
         const nxt = getNextNode(node.id);
@@ -146,7 +146,6 @@ const TextNode: React.FC<TextNodeProps> = ({
 
     return;
   };
-
 
   return (
     <div>
