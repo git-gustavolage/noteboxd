@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import TextNodeData from "../types/TextNodeData";
 import TextNode from "./TextNode";
+import { CursorProvider } from "../contexts/CursorContext";
 
 export const TextEditor: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -34,23 +35,21 @@ export const TextEditor: React.FC = () => {
     setNodes((prev) => prev.map((node) => node.id === id ? { ...node, text, editCount: node.editCount + 1 } : node));
   }
 
-  const split = (id: string, cursorPosition: number) => {
-    setNodes((prev) => {
-      const index = prev.findIndex((n) => n.id === id);
-      const current = prev[index];
+  const split = (id: string, cursorPosition: number): TextNodeData | undefined => {
+    const node = nodes.filter((n) => n.id === id)[0];
+    if (!node) return;
 
-      if (!current) return prev;
+    const left = { ...node, text: node.text.slice(0, cursorPosition) };
+    const right = createNode(node.text.slice(cursorPosition).trimEnd());
 
-      const left = { ...current, text: current.text.slice(0, cursorPosition) };
-      const right = createNode(current.text.slice(cursorPosition).trimEnd());
+    setActiveId(right.id);
 
-      setActiveId(right.id);
+    setNodes((prev) => [...prev.filter((n) => n.id !== id), left, right]);
 
-      return [...prev.slice(0, index), left, right, ...prev.slice(index + 1)];
-    });
+    return right;
   }
 
-  const merge = (current_id?: string, otherId?: string) => {
+  const merge = (current_id?: string, otherId?: string): TextNodeData | undefined => {
     if (!current_id || !otherId) return;
 
     const current = nodes.filter((n) => n.id === current_id)[0];
@@ -64,7 +63,7 @@ export const TextEditor: React.FC = () => {
     return merged;
   }
 
-  const getPreviusNode = (id: string) => {
+  const getPreviousNode = (id: string) => {
     const index = nodes.findIndex((n) => n.id === id);
     if (index <= 0) return null;
     return nodes[index - 1];
@@ -83,24 +82,26 @@ export const TextEditor: React.FC = () => {
   };
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full min-h-[50px] bg-white text-black"
-      onClick={handleClick}
-    >
-      {nodes.map((node) => (
-        <TextNode
-          key={node.id}
-          node={node}
-          setActive={setActive}
-          updateText={updateText}
-          split={split}
-          merge={merge}
-          active={node.id === activeId}
-          getPreviusNode={getPreviusNode}
-          getNextNode={getNextNode}
-        />
-      ))}
-    </div>
+    <CursorProvider>
+      <div
+        ref={containerRef}
+        className="w-full h-full min-h-[50px] bg-white text-black"
+        onClick={handleClick}
+      >
+        {nodes.map((node) => (
+          <TextNode
+            key={node.id}
+            node={node}
+            setActive={setActive}
+            updateText={updateText}
+            split={split}
+            merge={merge}
+            active={node.id === activeId}
+            getPreviousNode={getPreviousNode}
+            getNextNode={getNextNode}
+          />
+        ))}
+      </div>
+    </CursorProvider>
   )
 }
