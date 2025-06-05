@@ -1,6 +1,5 @@
 import React from "react";
-import { TextEditor } from "./components/TextNode";
-// import TextEditor from "./components/TextEditor";
+import { TextEditor } from "./components/TextEditor";
 
 const App: React.FC = () => {
   
