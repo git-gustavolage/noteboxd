@@ -25,6 +25,22 @@ const setCursorToEnd = (element: HTMLElement) => {
   selection?.addRange(range);
 };
 
+function getCaretCharacterOffsetWithin(element: HTMLElement) {
+  const selection = window.getSelection();
+  if (!selection) return 0;
+  let caretOffset = 0;
+
+  if (selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    const preCaretRange = range.cloneRange();
+    preCaretRange.selectNodeContents(element);
+    preCaretRange.setEnd(range.endContainer, range.endOffset);
+    caretOffset = preCaretRange.toString().length;
+  }
+
+  return caretOffset;
+}
+
 export const TextEditor: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [nodes, setNodes] = useState<TextNodeData[]>([]);
@@ -62,10 +78,13 @@ export const TextEditor: React.FC = () => {
       const index = prev.findIndex((n) => n.id === id);
       const current = prev[index];
 
+      if (!current) return prev;
+
       const left = { ...current, text: current.text.slice(0, cursorPosition) };
       const right = createNode(current.text.slice(cursorPosition).trimEnd());
 
       setActiveId(right.id);
+
       return [...prev.slice(0, index), left, right, ...prev.slice(index + 1)];
     });
   }
@@ -79,7 +98,7 @@ export const TextEditor: React.FC = () => {
   return (
     <div
       ref={containerRef}
-      className="px-4 py-8 w-full h-full bg-zinc-900 text-white"
+      className="px-4 py-8 w-full h-full bg-white text-black border"
       onClick={handleClick}
     >
       {nodes.map((node) => (
@@ -104,6 +123,8 @@ interface TextNodeProps {
   setActive: (id: string) => void
 }
 
+
+
 const TextNode: React.FC<TextNodeProps> = ({ node, updateText, split, active, setActive }) => {
   const element = useRef<HTMLDivElement>(null);
   const cursorPosition = useRef(0);
@@ -124,38 +145,27 @@ const TextNode: React.FC<TextNodeProps> = ({ node, updateText, split, active, se
     updateText(node.id, text);
   }
 
-  const forceSplit = () => {
-    cursorPosition.current = window.getSelection()?.anchorOffset ?? 0;
-    split(node.id, cursorPosition.current);
-  }
-
   const handleKeyPress = (e: React.KeyboardEvent<HTMLDivElement>) => {
 
     if (e.key === "Enter") {
       e.preventDefault();
-      cursorPosition.current = window.getSelection()?.anchorOffset ?? 0;
+      cursorPosition.current = getCaretCharacterOffsetWithin(element.current!);
       split(node.id, cursorPosition.current);
     }
   }
 
   return (
     <div>
-      <p>{node.id}</p>
+      {/* <p>{node.id}</p> */}
       <div
         ref={element}
-        className={"node w-full p-1 my-1 rounded outline-none whitespace-pre-wrap min-h-[1em] text-base leading-6 hover:bg-zinc-800 focus:ring-2 focus:ring-zinc-800/90 duration-200 ease-out " + (active ? "bg-zinc-800" : "")}
+        className={"node w-full p-1 my-1 rounded outline-none whitespace-pre-wrap min-h-[1em] text-base leading-6  "}
         onInput={handleInput}
         onClick={() => setActive(node.id)}
         onKeyDown={handleKeyPress}
         contentEditable
         suppressContentEditableWarning
       />
-      <button
-        className="p-2 my-1 rounded bg-zinc-600 hover:bg-zinc-800 duration-200 ease-out"
-        onClick={forceSplit}
-      >
-        Split
-      </button>
     </div>
   )
 }
