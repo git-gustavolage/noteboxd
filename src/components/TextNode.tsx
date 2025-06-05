@@ -48,6 +48,9 @@ export const TextEditor: React.FC = () => {
   const [countNodes, setCountNodes] = useState(1);
   const [mapTest, setMapTest] = useState(new Map());
 
+  console.log(nodes);
+
+
   const setActive = (id: string) => {
     setActiveId(id);
   }
@@ -89,6 +92,32 @@ export const TextEditor: React.FC = () => {
     });
   }
 
+  const merge = (current_id?: string, otherId?: string) => {
+    if (!current_id || !otherId) return;
+
+    const current = nodes.filter((n) => n.id === current_id)[0];
+    const other = nodes.filter((n) => n.id === otherId)[0];
+
+    if (!current || !other) return;
+
+    const merged = { ...current, text: current.text + other.text, editCount: current.editCount + 1 };
+    setNodes((prev) => prev.filter((n) => n.id !== otherId).map((n) => n.id === current_id ? merged : n));
+    setActiveId(current_id);
+    return merged;
+  }
+
+  const getPreviusNode = (id: string) => {
+    const index = nodes.findIndex((n) => n.id === id);
+    if (index <= 0) return null;
+    return nodes[index - 1];
+  }
+
+  const getNextNode = (id: string) => {
+    const index = nodes.findIndex((n) => n.id === id);
+    if (index >= nodes.length - 1) return null;
+    return nodes[index + 1];
+  }
+
   const handleClick = (e: React.MouseEvent) => {
     if (e.target === containerRef.current) {
       addNode(createNode(""));
@@ -98,7 +127,7 @@ export const TextEditor: React.FC = () => {
   return (
     <div
       ref={containerRef}
-      className="px-4 py-8 w-full h-full bg-white text-black border"
+      className="w-full h-full min-h-[50px] bg-white text-black"
       onClick={handleClick}
     >
       {nodes.map((node) => (
@@ -108,7 +137,10 @@ export const TextEditor: React.FC = () => {
           setActive={setActive}
           updateText={updateText}
           split={split}
+          merge={merge}
           active={node.id === activeId}
+          getPreviusNode={getPreviusNode}
+          getNextNode={getNextNode}
         />
       ))}
     </div>
@@ -119,13 +151,14 @@ interface TextNodeProps {
   node: TextNodeData,
   updateText: (id: string, text: string) => void
   split: (id: string, cursorPosition: number) => void
+  merge: (currentId?: string, otherId?: string) => TextNodeData | undefined
   active: boolean,
-  setActive: (id: string) => void
+  setActive: (id: string) => void,
+  getPreviusNode: (id: string) => TextNodeData | null
+  getNextNode: (id: string) => TextNodeData | null
 }
 
-
-
-const TextNode: React.FC<TextNodeProps> = ({ node, updateText, split, active, setActive }) => {
+const TextNode: React.FC<TextNodeProps> = ({ node, updateText, split, merge, active, setActive, getPreviusNode, getNextNode }) => {
   const element = useRef<HTMLDivElement>(null);
   const cursorPosition = useRef(0);
 
@@ -152,14 +185,47 @@ const TextNode: React.FC<TextNodeProps> = ({ node, updateText, split, active, se
       cursorPosition.current = getCaretCharacterOffsetWithin(element.current!);
       split(node.id, cursorPosition.current);
     }
+
+    if (e.key === "Backspace" && getCaretCharacterOffsetWithin(element.current!) === 0) {
+      e.preventDefault();
+      const prev = getPreviusNode(node.id);
+      if(!prev) return;
+      const merged = merge(prev!.id, node.id);
+      if (merged) {
+        cursorPosition.current = getCaretCharacterOffsetWithin(element.current!);
+      }
+    }
+
+    if (e.key === "Delete" && getCaretCharacterOffsetWithin(element.current!) === element.current!.innerText.length) {
+      e.preventDefault();
+      const next = getNextNode(node.id);
+      if(!next) return;
+      const merged = merge(node.id, next!.id);
+      if (merged) {
+        cursorPosition.current = getCaretCharacterOffsetWithin(element.current!);
+      }
+    }
+
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const prev = getPreviusNode(node.id);
+      if(!prev) return;
+      setActive(prev!.id);
+    }
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const next = getNextNode(node.id);
+      if(!next) return;
+      setActive(next!.id);
+    }
   }
 
   return (
     <div>
-      {/* <p>{node.id}</p> */}
       <div
         ref={element}
-        className={"node w-full p-1 my-1 rounded outline-none whitespace-pre-wrap min-h-[1em] text-base leading-6  "}
+        className={"node w-full p-0.5 my-1 rounded outline-none whitespace-pre-wrap min-h-[1em] text-base leading-6"}
         onInput={handleInput}
         onClick={() => setActive(node.id)}
         onKeyDown={handleKeyPress}
