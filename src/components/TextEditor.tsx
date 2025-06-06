@@ -36,16 +36,18 @@ export const TextEditor: React.FC = () => {
   }
 
   const split = (id: string, cursorPosition: number): TextNodeData | undefined => {
-    //TODO: refatorar
-    const node = nodes.filter((n) => n.id === id)[0];
+    const currentNodeIndex = nodes.findIndex((n) => n.id === id);
+    const node = nodes[currentNodeIndex];
     if (!node) return;
 
     const left = { ...node, text: node.text.slice(0, cursorPosition) };
     const right = createNode(node.text.slice(cursorPosition).trimEnd());
 
-    setActiveId(right.id);
+    setNodes((prev) => {
+      return [...prev.slice(0, currentNodeIndex), left, right, ...prev.slice(currentNodeIndex + 1)]
+    });
 
-    setNodes((prev) => [...prev.filter((n) => n.id !== id), left, right]);
+    setActiveId(right.id);
 
     return right;
   }
