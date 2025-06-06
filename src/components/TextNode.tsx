@@ -49,6 +49,9 @@ const TextNode: React.FC<TextNodeProps> = ({
 
   const handleClick = () => {
     setActive(node.id);
+    const pos = getPosition();
+
+    setCursorPosition(node.id, pos);
   };
 
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
@@ -68,6 +71,7 @@ const TextNode: React.FC<TextNodeProps> = ({
 
 
     if (e.key === "Enter") {
+      //TODO: handle other scenarios
       e.preventDefault();
       const newNode = split(node.id, pos);
       if (!newNode) return;

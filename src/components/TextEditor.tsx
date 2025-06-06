@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import TextNodeData from "../types/TextNodeData";
 import TextNode from "./TextNode";
 import { CursorProvider } from "../contexts/CursorContext";
+import Editor from "../lib/react/TextEditor/Editor" ;
 
 export const TextEditor: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -21,14 +22,9 @@ export const TextEditor: React.FC = () => {
     setMapTest(new Map(mapTest));
   }
 
-  const createNode = (text: string) => {
+  const create = (text: string) => {
     setCountNodes(countNodes + 1);
-    return {
-      id: countNodes.toString(),
-      text,
-      createdAt: new Date(),
-      editCount: 0
-    }
+    return Editor.createNode(text);
   }
 
   const updateText = (id: string, text: string) => {
@@ -40,8 +36,7 @@ export const TextEditor: React.FC = () => {
     const node = nodes[currentNodeIndex];
     if (!node) return;
 
-    const left = { ...node, text: node.text.slice(0, cursorPosition) };
-    const right = createNode(node.text.slice(cursorPosition).trimEnd());
+    const [left, right] = Editor.splitNode(node, cursorPosition);
 
     setNodes((prev) => {
       return [...prev.slice(0, currentNodeIndex), left, right, ...prev.slice(currentNodeIndex + 1)]
@@ -52,18 +47,17 @@ export const TextEditor: React.FC = () => {
     return right;
   }
 
-  const merge = (current_id?: string, otherId?: string): TextNodeData | undefined => {
-    if (!current_id || !otherId) return;
+  const merge = (currentId?: string, otherId?: string): TextNodeData | undefined => {
+    if (!currentId || !otherId) return;
 
-    const current = nodes.filter((n) => n.id === current_id)[0];
+    const current = nodes.filter((n) => n.id === currentId)[0];
     const other = nodes.filter((n) => n.id === otherId)[0];
 
-    if (!current || !other) return;
+    const merged = Editor.mergeNodes(current, other);
+    setNodes((prev) => prev.filter((n) => n.id !== otherId).map((n) => n.id === currentId ? merged : n));
+    setActiveId(currentId);
 
-    const merged = { ...current, text: current.text + other.text, editCount: current.editCount + 1 };
-    setNodes((prev) => prev.filter((n) => n.id !== otherId).map((n) => n.id === current_id ? merged : n));
-    setActiveId(current_id);
-    return merged;
+    return merged
   }
 
   const getPreviousNode = (id: string) => {
@@ -80,7 +74,7 @@ export const TextEditor: React.FC = () => {
 
   const handleClick = (e: React.MouseEvent) => {
     if (e.target === containerRef.current) {
-      addNode(createNode(""));
+      addNode(create(""));
     }
   };
 
