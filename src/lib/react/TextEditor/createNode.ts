@@ -5,7 +5,9 @@ function createNode(text: string): Node {
     id: Date.now().toString(),
     text,
     createdAt: new Date(),
-    editCount: 0
+    editCount: 0,
+    cursorPosition: 0,
+    active: true,
   } as Node;
 }
 

@@ -1,25 +1,45 @@
 import { useRef, useState } from "react";
-import TextNodeData from "../types/TextNodeData";
 import TextNode from "./TextNode";
 import { CursorProvider } from "../contexts/CursorContext";
-import Editor from "../lib/react/TextEditor/Editor" ;
+import Editor from "../lib/react/TextEditor/Editor";
+import Node from "../lib/react/TextEditor/Node";
+
+type State = Node[];
+
+type SetStateAction = State | ((prevState: State) => State);
+
+const useHistory = (initialState: State): [State, (action: SetStateAction) => void, () => void, () => void] => {
+  const [index, setIndex] = useState(0);
+  const [history, setHistory] = useState<State[]>([initialState]);
+
+  const setState = (action: SetStateAction) => {
+    const newState = typeof action === 'function' ? (action as (prevState: State) => State)(history[index]) : action;
+
+    setHistory((prev) => [...prev.slice(0, index + 1), newState]);
+    setIndex((prev) => prev + 1);
+  };
+
+  const undo = () => {
+    if (index === 0) return;
+    setIndex((prev) => prev - 1);
+  }
+
+  const redo = () => {
+    if (index === history.length - 1) return;
+    setIndex((prev) => prev + 1);
+  }
+
+  return [history[index], setState, undo, redo];
+};
+
 
 export const TextEditor: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [nodes, setNodes] = useState<TextNodeData[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [nodes, setNodes, undo, redo] = useHistory([Editor.createNode("")]);
   const [countNodes, setCountNodes] = useState(1);
-  const [mapTest, setMapTest] = useState(new Map());
 
-  const setActive = (id: string) => {
-    setActiveId(id);
-  }
-
-  const addNode = (node: TextNodeData) => {
+  const addNode = (node: Node) => {
     setNodes((prev) => prev.find((n) => n.id === node.id) ? prev : [...prev, node]);
-    setActive(node.id);
-    mapTest.set(node.id, node);
-    setMapTest(new Map(mapTest));
   }
 
   const create = (text: string) => {
@@ -27,11 +47,11 @@ export const TextEditor: React.FC = () => {
     return Editor.createNode(text);
   }
 
-  const updateText = (id: string, text: string) => {
-    setNodes((prev) => prev.map((node) => node.id === id ? { ...node, text, editCount: node.editCount + 1 } : node));
+  const updateNode = (node: Node) => {
+    setNodes((prev) => prev.map((n) => n.id === node.id ? { ...node, editCount: n.editCount + 1 } : n));
   }
 
-  const split = (id: string, cursorPosition: number): TextNodeData | undefined => {
+  const split = (id: string, cursorPosition: number): Node | undefined => {
     const currentNodeIndex = nodes.findIndex((n) => n.id === id);
     const node = nodes[currentNodeIndex];
     if (!node) return;
@@ -42,12 +62,10 @@ export const TextEditor: React.FC = () => {
       return [...prev.slice(0, currentNodeIndex), left, right, ...prev.slice(currentNodeIndex + 1)]
     });
 
-    setActiveId(right.id);
-
     return right;
   }
 
-  const merge = (currentId?: string, otherId?: string): TextNodeData | undefined => {
+  const merge = (currentId?: string, otherId?: string): Node | undefined => {
     if (!currentId || !otherId) return;
 
     const current = nodes.filter((n) => n.id === currentId)[0];
@@ -55,7 +73,6 @@ export const TextEditor: React.FC = () => {
 
     const merged = Editor.mergeNodes(current, other);
     setNodes((prev) => prev.filter((n) => n.id !== otherId).map((n) => n.id === currentId ? merged : n));
-    setActiveId(currentId);
 
     return merged
   }
@@ -80,22 +97,35 @@ export const TextEditor: React.FC = () => {
 
   return (
     <CursorProvider>
+      <div className="flex gap-4">
+        <button
+          onClick={undo}
+          className="border px-3 py-1 text-sm rounded-md bg-gray-400 text-white "
+        >
+          {"<- Undo"}
+        </button>
+        <button
+          onClick={redo} className="border px-3 py-1 text-sm rounded-md bg-gray-400 text-white "
+        >
+          {"Redo ->"}
+        </button>
+      </div>
       <div
         ref={containerRef}
-        className="w-full h-full min-h-[50px] bg-white text-black"
+        className="w-full h-full min-h-[50px] bg-white text-black border border-gray-300 rounded-md mt-4"
         onClick={handleClick}
+        
       >
         {nodes.map((node) => (
           <TextNode
             key={node.id}
             node={node}
-            setActive={setActive}
-            updateText={updateText}
+            updateNode={updateNode}
             split={split}
             merge={merge}
-            active={node.id === activeId}
             getPreviousNode={getPreviousNode}
             getNextNode={getNextNode}
+            undo={undo}
           />
         ))}
       </div>

@@ -20,7 +20,7 @@ export const CursorProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const getCursorPosition = (nodeId: string) => {
-    return positions[nodeId] ?? 0;
+    return positions[nodeId] ?? 1;
   };
 
   return (

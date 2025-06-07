@@ -6,6 +6,8 @@ function mergeNodes(node1: Node, node2: Node): Node {
     text: node1.text + node2.text,
     createdAt: node1.createdAt,
     editCount: node1.editCount + 1,
+    cursorPosition: node1.cursorPosition,
+    active: true,
   };
 }
 

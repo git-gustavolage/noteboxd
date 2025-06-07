@@ -12,6 +12,7 @@ function splitNode(node: Node, position: number): [Node, Node] {
   const newNode = createNode(node.text.slice(position).trimEnd());
 
   node.text = node.text.slice(0, position);
+  node.active = false;
 
   return [node, newNode];
 }

@@ -3,6 +3,8 @@ type Node = {
   text: string;
   createdAt: Date;
   editCount: number;
+  cursorPosition: number;
+  active: boolean;
 };
 
 export default Node;

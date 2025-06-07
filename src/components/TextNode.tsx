@@ -1,31 +1,29 @@
 import { useEffect, useRef } from "react";
-import TextNodeData from "../types/TextNodeData";
 import useCursor from "../hooks/useCursor";
 import { useCursorContext } from "../contexts/CursorContext";
+import Node from "../lib/react/TextEditor/Node";
 
 interface TextNodeProps {
-  node: TextNodeData,
-  updateText: (id: string, text: string) => void
-  split: (id: string, cursorPosition: number) => TextNodeData | undefined
-  merge: (currentId?: string, otherId?: string) => TextNodeData | undefined
-  active: boolean,
-  setActive: (id: string) => void,
-  getPreviousNode: (id: string) => TextNodeData | null
-  getNextNode: (id: string) => TextNodeData | null
+  node: Node,
+  updateNode: (node: Node) => void
+  split: (id: string, cursorPosition: number) => Node | undefined
+  merge: (currentId?: string, otherId?: string) => Node | undefined
+  getPreviousNode: (id: string) => Node | null
+  getNextNode: (id: string) => Node | null
+  undo: () => void
 }
 
 const TextNode: React.FC<TextNodeProps> = ({
   node,
-  updateText,
+  updateNode,
   split,
   merge,
-  active,
-  setActive,
   getPreviousNode,
   getNextNode,
+  undo,
 }) => {
   const elementRef = useRef<HTMLDivElement>(null);
-  const { setCursorPosition, getCursorPosition } = useCursorContext();
+  const { setCursorPosition } = useCursorContext();
 
   const { setCursorToPosition, getPosition } = useCursor(elementRef.current, (pos) => setCursorPosition(node.id, pos));
 
@@ -36,19 +34,19 @@ const TextNode: React.FC<TextNodeProps> = ({
       elementRef.current.innerText = node.text;
     }
 
-    if (active) {
+    if (node.active) {
       elementRef.current.focus();
 
-      const position = getCursorPosition(node.id);
+      const position = node.cursorPosition ?? 0;
 
       const clamped = Math.min(position, node.text.length);
 
       setCursorToPosition(clamped);
     }
-  }, [node, active]);
+  }, [node.active, node.text]);
 
   const handleClick = () => {
-    setActive(node.id);
+    node.active = true;
     const pos = getPosition();
 
     setCursorPosition(node.id, pos);
@@ -56,11 +54,13 @@ const TextNode: React.FC<TextNodeProps> = ({
 
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
     const text = e.currentTarget.innerText;
+    node.text = text;
 
     const pos = getPosition();
     setCursorPosition(node.id, pos);
+    node.cursorPosition = pos ?? 0;
 
-    updateText(node.id, text);
+    updateNode(node);
   };
 
 
@@ -69,16 +69,18 @@ const TextNode: React.FC<TextNodeProps> = ({
 
     setCursorPosition(node.id, pos);
 
+    if(e.key === "z" && e.ctrlKey) {
+      console.log("udno");
+    }
+
 
     if (e.key === "Enter") {
-      //TODO: handle other scenarios
       e.preventDefault();
       const newNode = split(node.id, pos);
       if (!newNode) return;
 
       setCursorPosition(newNode.id, 0);
 
-      setActive(newNode.id);
       return;
     }
 
@@ -94,13 +96,12 @@ const TextNode: React.FC<TextNodeProps> = ({
       const baseTextLength = prev.text.length;
       setCursorPosition(mergedId, baseTextLength);
 
-      setActive(mergedId);
       return;
     }
 
 
     if (e.key === "Delete") {
-      const textLen = elementRef.current?.innerText.length ?? 0;      
+      const textLen = elementRef.current?.innerText.length ?? 0;
       if (pos === textLen) {
         e.preventDefault();
         const nxt = getNextNode(node.id);
@@ -112,7 +113,6 @@ const TextNode: React.FC<TextNodeProps> = ({
         const baseTextLength = node.text.length;
         setCursorPosition(mergedId, baseTextLength);
 
-        setActive(mergedId);
       }
 
       return;
@@ -127,7 +127,6 @@ const TextNode: React.FC<TextNodeProps> = ({
       const column = pos;
 
       setCursorPosition(node.id, pos);
-      setActive(prev.id);
       setCursorPosition(prev.id, Math.min(column, prev.text.length));
 
       return;
@@ -142,7 +141,6 @@ const TextNode: React.FC<TextNodeProps> = ({
       const column = pos;
 
       setCursorPosition(node.id, pos);
-      setActive(nxt.id);
       setCursorPosition(nxt.id, Math.min(column, nxt.text.length));
 
       return;
